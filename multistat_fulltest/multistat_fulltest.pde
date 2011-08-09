@@ -349,6 +349,7 @@ void holdGround()
   if(dacset[0]<0) dacset[0]=0;
   if(dacset[0]>4090) dacset[0]=4090;
   write_dac(0,dacset[0]);
+  dac_update();
 }
 
 void potentiostat()
@@ -369,17 +370,17 @@ void potentiostat()
       dacset[j] = dacset[j] + move;
       if (dacset[j]>4090)
       {
-        res[j] = res[j] - 2;
+        res[j] = res[j] - res[j]/6;
         dacset[j] = 4000;
         //res = res-res/6;
         if (res[j]<1) res[j]=1;
       }else if (dacset[j]<0){
-        res[j] = res[j]-2;
+        res[j] = res[j]-res[j]/6;
         dacset[j] = 1;
         //res = res - res/6;
         if (res[j]<1) res[j]=1;
       }
-      if (abs(dacset[j]-diff_adc_ref)>100){
+      if (abs(dacset[j]-diff_adc_ref)>4000){
         res[j] = res[j] + 2;
         if (res[j]>255) res[j] = 255;
       }
