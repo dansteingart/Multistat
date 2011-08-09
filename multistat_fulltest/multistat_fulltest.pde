@@ -57,7 +57,7 @@ int output;
 boolean gstat = false;
 boolean pstat = false;
 //boolean cv = false;
-int setting[]={0,0,0,0,0,0,0}; //nothing is [0]
+int setting[]={0,0,0,0,0,0,0}; 
 
 int throttle = 100;
 int countto = 0;
@@ -92,11 +92,12 @@ void setup()
   sendByte(B01000000,HIGH);
   digitalWrite(SLAVESELECTD,HIGH);
   delay(100);
+  Serial.println("MAX setup");
 
   //turn on the DACs
-  counterOn();
+  //counterOn();
   delay(100);
-  workGround();
+  //workGround();
   delay(100);
 
   //ADC Conversion Register
@@ -104,12 +105,14 @@ void setup()
   sendByte(B11111000,HIGH);
   digitalWrite(SLAVESELECTD,HIGH);
   delay(100);
+  Serial.println("ADC conversion");
 
   //ADC Averaging Register
   digitalWrite(SLAVESELECTD,LOW);
   sendByte(B00110000,HIGH);
   digitalWrite(SLAVESELECTD,HIGH);
   delay(100);
+  Serial.println("ADC averaging");
 
   digitalWrite(SLAVESELECTD,LOW);
   sendByte(dacInit,HIGH);      //set dacs to 0 to start
@@ -157,9 +160,10 @@ void loop()
       switch (serInString[0])
       {
         case 48:  mode=0;        //0
+                  setting[0]=out;
                   write_dac(0,out);
-                  //if (out==0) workGround();
-                  /*else*/ workOn();
+                  if (out==0) workGround();
+                  else workOn();
                   break;
         case 49:  mode=1;        //1
                   //mode=3;
@@ -288,6 +292,7 @@ void loop()
   sendout();
   if (pstat) potentiostat();
   if (gstat) galvanostat();
+  holdGround();
   //if (cv)
   //if (dactest) testdac();
   // if (rtest) testr();
@@ -334,17 +339,23 @@ void sendout()
   
 }
 
+void holdGround()
+{
+  //try to maintain ground's set potential
+  if (setting[0]==0) workGround();
+  else workOn();
+  int move = int(0.9*(setting[0]-adc[0]));
+  dacset[0] = dacset[0]+move;
+  if(dacset[0]<0) dacset[0]=0;
+  if(dacset[0]>4090) dacset[0]=4090;
+  write_dac(0,dacset[0]);
+}
+
 void potentiostat()
 {
-  //counterOn(); //for good luck
-  //workOn();
-  //int diff_adc_ref = adc - refelectrode;
   for(int j=1;j<7;j++)
     {
-      //make  sure to send absolute voltage values.
-      //adcs are normalized.   for example,
-      //send working 2000 and counter 4000 to get -2V
-      float diff_adc_ref = adc[j];
+      float diff_adc_ref = adc[j] - adc[0];
       float err = setting[j] - diff_adc_ref;  
       int move = 0;
       //for (int i=2;i<=11;i++) lastData[i-1]=lastData[i];
@@ -356,15 +367,14 @@ void potentiostat()
       //move = int(p+i+d);
       move = int(p);
       dacset[j] = dacset[j] + move;
-      //Serial.println(move);
       if (dacset[j]>4090)
       {
-        res[j] = res[j] - 2;//(dacset[j]-4095)/4096.*255;
+        res[j] = res[j] - 2;
         dacset[j] = 4000;
         //res = res-res/6;
         if (res[j]<1) res[j]=1;
       }else if (dacset[j]<0){
-        res[j] = res[j]-2;//(dacset[j]+(lastData[10]-lastData[9]))/1024.*255.;
+        res[j] = res[j]-2;
         dacset[j] = 1;
         //res = res - res/6;
         if (res[j]<1) res[j]=1;
@@ -511,7 +521,6 @@ void dac_update()
 
 void write_pots(int value)
 {
-  Serial.println("sup");
   for (int i=1;i<7;i++)
   {
     write_pot(i,value);
@@ -649,7 +658,6 @@ void workOn()
   sendByte(B11110000,HIGH);
   sendByte(B00010010,HIGH);
   digitalWrite(SLAVESELECTD,HIGH); 
-  Serial.println("sup");
 }
 
 void counterGround()
